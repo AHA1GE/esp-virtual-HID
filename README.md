@@ -34,6 +34,10 @@ Bluetooth at the same time.
 | Solid | Starting up |
 | Breathing | Hotspot ready, waiting for a device |
 | Blinking | A device is connected to the hotspot |
+| Fast red flashing | Hard error (the device is not usable) |
+
+The status LED is white; on boards with an RGB WS2812 a hard error flashes
+red, while a plain LED just flashes fast.
 
 ## Change the hotspot
 

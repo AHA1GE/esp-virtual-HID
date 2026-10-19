@@ -28,6 +28,7 @@ static bool s_active_low;
 
 #define BREATH_PERIOD_MS 2000   /* one full breathing cycle */
 #define BLINK_PERIOD_MS  500    /* 2 Hz blink: 250 ms on, 250 ms off */
+#define ERROR_PERIOD_MS  100    /* 10 Hz red error flash: 50 ms on/off */
 #define STEP_MS          10
 
 static const char *TAG = "status_led";
@@ -65,12 +66,17 @@ static esp_err_t ws2812_init(int gpio)
     return rmt_enable(s_rmt_chan);
 }
 
-/* Single WS2812 pixel, blue channel. Idle-low between frames supplies the
- * >50 us reset pulse. */
-static void ws2812_write(uint32_t brightness)
+/* Single WS2812 pixel: white normally, red for errors. Idle-low between
+ * frames supplies the >50 us reset pulse. */
+static void ws2812_write(uint32_t brightness, bool red)
 {
-    uint8_t blue = (uint8_t)((brightness * 255u) / LED_MAX_BRIGHTNESS);
-    uint8_t grb[3] = { 0, 0, blue }; /* wire order is G, R, B */
+    uint8_t level = (uint8_t)((brightness * 255u) / LED_MAX_BRIGHTNESS);
+    uint8_t grb[3] = { level, level, level }; /* wire order is G, R, B */
+    if (red) {
+        grb[0] = 0;
+        grb[1] = level;
+        grb[2] = 0;
+    }
     rmt_transmit_config_t tx_cfg = { .loop_count = 0 };
     if (rmt_transmit(s_rmt_chan, s_rmt_encoder, grb, sizeof(grb), &tx_cfg) == ESP_OK) {
         rmt_tx_wait_all_done(s_rmt_chan, 100);
@@ -84,7 +90,7 @@ esp_err_t status_led_start(int gpio, bool active_low)
 #if CONFIG_KBD_LED_WS2812
     (void)active_low;
     ESP_RETURN_ON_ERROR(ws2812_init(gpio), TAG, "ws2812 init");
-    ws2812_write(0); /* off until the task takes over */
+    ws2812_write(0, false); /* off until the task takes over */
 #else
     s_active_low = active_low;
 
@@ -118,11 +124,12 @@ void status_led_set_mode(led_mode_t mode)
     s_mode = mode;
 }
 
-static void apply_duty(uint32_t brightness) /* 0..LED_MAX_BRIGHTNESS, 0 = dark */
+static void apply_duty(uint32_t brightness, bool red) /* 0..LED_MAX_BRIGHTNESS, 0 = dark */
 {
 #if CONFIG_KBD_LED_WS2812
-    ws2812_write(brightness);
+    ws2812_write(brightness, red);
 #else
+    (void)red; /* a plain LED can only show brightness, not colour */
     uint32_t duty = s_active_low ? LED_MAX_BRIGHTNESS - brightness : brightness;
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL);
@@ -145,12 +152,16 @@ static void led_task(void *arg)
             brightness = (uint32_t)((1.0f - cosf(phase * 2.0f * (float)M_PI)) * 0.5f * LED_MAX_BRIGHTNESS);
             break;
         }
+        case LED_MODE_ERROR:
+            /* fast red flash: 10 Hz */
+            brightness = (t_ms % ERROR_PERIOD_MS) < (ERROR_PERIOD_MS / 2) ? LED_MAX_BRIGHTNESS : 0;
+            break;
         case LED_MODE_ACTIVE:
         default:
             brightness = (t_ms % BLINK_PERIOD_MS) < (BLINK_PERIOD_MS / 2) ? LED_MAX_BRIGHTNESS : 0;
             break;
         }
-        apply_duty(brightness);
+        apply_duty(brightness, mode == LED_MODE_ERROR);
         vTaskDelay(pdMS_TO_TICKS(STEP_MS));
         t_ms += STEP_MS;
     }

@@ -7,9 +7,9 @@ menu "Virtual Keyboard Configuration"
         range 0 48
         help
             GPIO driving the status LED (solid: booting, breathing: waiting
-            for a softAP client, blinking: client connected). The ESP32-S3
-            Super Mini has its onboard WS2812 on GPIO48; ESP32-C3 Super Mini
-            boards use GPIO8.
+            for a softAP client, blinking: client connected, fast red flash:
+            hard error). The ESP32-S3 Super Mini has its onboard WS2812 on
+            GPIO48; ESP32-C3 Super Mini boards use GPIO8.
 
     config KBD_LED_ACTIVE_LOW
         bool "Status LED is active-low"
@@ -24,8 +24,8 @@ menu "Virtual Keyboard Configuration"
         default n
         help
             Drive the status LED with the WS2812 protocol (RMT) instead of
-            LEDC PWM. The three patterns use the blue channel.
-            ESP32-S3 Super Mini boards have a WS2812 on GPIO48.
+            LEDC PWM. The patterns are white; a hard error flashes red at
+            10 Hz. ESP32-S3 Super Mini boards have a WS2812 on GPIO48.
 
 
     config KBD_FACTORY_RESET_GPIO

@@ -16,6 +16,7 @@ static kbd_settings_t s_cfg = {
     .pass = "",
     .sticky_keys = false,
     .toggle_keys = false,
+    .led_brightness = CONFIG_KBD_LED_BRIGHTNESS,
 };
 
 /* s_cfg is read from several tasks (web server, Wi-Fi/BLE/USB event callbacks),
@@ -38,6 +39,9 @@ static void load_from_nvs(void)
     }
     if (nvs_get_u8(h, "toggle", &v) == ESP_OK) {
         s_cfg.toggle_keys = v != 0;
+    }
+    if (nvs_get_u8(h, "ledb", &v) == ESP_OK && v >= 1 && v <= 100) {
+        s_cfg.led_brightness = v;
     }
     nvs_close(h);
 }
@@ -128,6 +132,25 @@ esp_err_t settings_set_features(bool sticky, bool toggle)
     return err;
 }
 
+esp_err_t settings_set_led_brightness(uint8_t percent)
+{
+    if (percent < 1 || percent > 100) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_cfg.led_brightness = percent;
+
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READWRITE, &h);
+    if (err == ESP_OK) {
+        nvs_set_u8(h, "ledb", percent);
+        err = nvs_commit(h);
+        nvs_close(h);
+    }
+    xSemaphoreGive(s_lock);
+    return err;
+}
+
 esp_err_t settings_erase(void)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
@@ -138,7 +161,11 @@ esp_err_t settings_erase(void)
         err = nvs_commit(h);
         nvs_close(h);
     }
-    memset(&s_cfg, 0, sizeof(s_cfg));
+    s_cfg.ssid[0] = '\0';
+    s_cfg.pass[0] = '\0';
+    s_cfg.sticky_keys = false;
+    s_cfg.toggle_keys = false;
+    s_cfg.led_brightness = CONFIG_KBD_LED_BRIGHTNESS;
     xSemaphoreGive(s_lock);
     ESP_LOGW(TAG, "settings erased");
     return err;

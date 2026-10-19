@@ -34,6 +34,7 @@ static bool s_active_low;
 static const char *TAG = "status_led";
 
 static volatile led_mode_t s_mode = LED_MODE_BOOT;
+static volatile uint8_t s_brightness_pct = 100;
 
 static void led_task(void *arg);
 
@@ -124,6 +125,16 @@ void status_led_set_mode(led_mode_t mode)
     s_mode = mode;
 }
 
+void status_led_set_brightness(uint8_t percent)
+{
+    if (percent < 1) {
+        percent = 1;
+    } else if (percent > 100) {
+        percent = 100;
+    }
+    s_brightness_pct = percent;
+}
+
 static void apply_duty(uint32_t brightness, bool red) /* 0..LED_MAX_BRIGHTNESS, 0 = dark */
 {
 #if CONFIG_KBD_LED_WS2812
@@ -161,6 +172,7 @@ static void led_task(void *arg)
             brightness = (t_ms % BLINK_PERIOD_MS) < (BLINK_PERIOD_MS / 2) ? LED_MAX_BRIGHTNESS : 0;
             break;
         }
+        brightness = (brightness * s_brightness_pct) / 100;
         apply_duty(brightness, mode == LED_MODE_ERROR);
         vTaskDelay(pdMS_TO_TICKS(STEP_MS));
         t_ms += STEP_MS;

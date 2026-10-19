@@ -16,6 +16,7 @@ typedef struct {
     char pass[KBD_PASS_MAX_LEN + 1];   /* empty means open network */
     bool sticky_keys;
     bool toggle_keys;
+    uint8_t led_brightness;            /* percent, 1..100 */
 } kbd_settings_t;
 
 /* nvs_flash_init() + load stored settings (fills defaults if absent) */
@@ -31,6 +32,9 @@ esp_err_t settings_set_ap(const char *ssid, const char *pass);
 
 /* Persist sticky/toggle feature switches. */
 esp_err_t settings_set_features(bool sticky, bool toggle);
+
+/* Persist the status LED brightness (1..100%). */
+esp_err_t settings_set_led_brightness(uint8_t percent);
 
 /* Erase the settings namespace; caller reboots afterwards. */
 esp_err_t settings_erase(void);

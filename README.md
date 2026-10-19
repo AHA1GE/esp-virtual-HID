@@ -42,8 +42,8 @@ red, while a plain LED just flashes fast.
 ## Change the hotspot
 
 Tap the menu button (☰) on the web page to change the network name and
-password. The hotspot restarts, so reconnect to the new name. Leave the
-password empty for an open network.
+password, and to adjust the status LED brightness. The hotspot restarts, so
+reconnect to the new name. Leave the password empty for an open network.
 
 ## Reset
 

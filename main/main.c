@@ -95,6 +95,9 @@ void app_main(void)
     if (err != ESP_OK) {
         hard_error("settings", err);
     }
+    kbd_settings_t cfg0;
+    settings_get(&cfg0);
+    status_led_set_brightness(cfg0.led_brightness);
 
     err = hid_core_init();
     if (err != ESP_OK) {

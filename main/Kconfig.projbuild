@@ -27,6 +27,16 @@ menu "Virtual Keyboard Configuration"
             LEDC PWM. The patterns are white; a hard error flashes red at
             10 Hz. ESP32-S3 Super Mini boards have a WS2812 on GPIO48.
 
+    config KBD_LED_BRIGHTNESS
+        int "Status LED brightness (%)"
+        range 1 100
+        default 60 if IDF_TARGET_ESP32S3
+        default 100
+        help
+            Overall brightness of the status LED patterns and the red error
+            flash. It can also be changed at runtime from the web settings
+            menu; this is only the initial default.
+
 
     config KBD_FACTORY_RESET_GPIO
         int "Factory reset button GPIO (hold 5 s)"

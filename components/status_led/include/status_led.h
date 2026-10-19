@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
 
 #ifdef __cplusplus
@@ -18,6 +19,9 @@ typedef enum {
 esp_err_t status_led_start(int gpio, bool active_low);
 
 void status_led_set_mode(led_mode_t mode);
+
+/* Overall brightness, 1..100%. Affects every pattern including the error flash. */
+void status_led_set_brightness(uint8_t percent);
 
 #ifdef __cplusplus
 }

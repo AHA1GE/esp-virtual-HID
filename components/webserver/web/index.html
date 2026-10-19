@@ -127,7 +127,7 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
   <span class="chip" id="chUsb"><i></i>USB</span>
   <button class="icobtn" id="btnMedia" title="Media keys">&#9836;</button>
   <button class="icobtn" id="btnFeat" title="Features">&#9881;</button>
-  <button class="icobtn" id="btnCfg" title="Hotspot settings">&#9776;</button>
+  <button class="icobtn" id="btnCfg" title="Settings">&#9776;</button>
 </header>
 <nav class="tabs">
   <button id="tabKbBtn" class="sel">Keyboard</button>
@@ -201,7 +201,7 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
 <!-- settings modal (default hidden) -->
 <div class="modal" id="mCfg">
   <div class="sheet">
-    <h2><span>Wi-Fi hotspot</span><b onclick="closeModals()">✕</b></h2>
+    <h2><span>Settings</span><b onclick="closeModals()">✕</b></h2>
     <div class="field">
       <label>Network name (SSID)</label>
       <input id="cfgSsid" maxlength="32" placeholder="ESP32KBD-XXXXXX">
@@ -212,6 +212,11 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
     </div>
     <button class="primary" id="cfgApply">Apply &amp; restart hotspot</button>
     <p class="hint" id="cfgMsg"></p>
+    <div class="slider-row">
+      <span>LED brightness</span>
+      <input type="range" id="ledBright" min="1" max="100" value="60">
+      <span id="ledVal">60</span>
+    </div>
   </div>
 </div>
 
@@ -243,6 +248,10 @@ function wsConnect() {
     if (m.t === "st") {
       setChip("chAp", m.ap); setChip("chBt", m.ble); setChip("chUsb", m.usb);
       if (m.ssid) { currentSsid = m.ssid; document.getElementById("cfgSsid").placeholder = m.ssid; }
+      if (m.led !== undefined) {
+        document.getElementById("ledBright").value = m.led;
+        document.getElementById("ledVal").textContent = m.led;
+      }
     } else if (m.t === "lock") {
       setLock("CAPS", m.caps); setLock("NUM", m.num); setLock("SCRLK", m.scroll);
     } else if (m.t === "feat") {
@@ -507,6 +516,12 @@ document.getElementById("cfgApply").onclick = () => {
   wsSend({ t: "cfg", ssid, pass });
   document.getElementById("cfgMsg").textContent = "applying... reconnect to the new network if it changed";
 };
+
+/* LED brightness: preview while dragging, persist when released. */
+const ledSlider = document.getElementById("ledBright");
+const ledLabel = document.getElementById("ledVal");
+ledSlider.addEventListener("input", () => { ledLabel.textContent = ledSlider.value; });
+ledSlider.addEventListener("change", () => wsSend({ t: "led", b: +ledSlider.value }));
 
 /* ---------- tabs ---------- */
 document.getElementById("tabKbBtn").onclick = () => selTab("tabKb", "tabKbBtn");

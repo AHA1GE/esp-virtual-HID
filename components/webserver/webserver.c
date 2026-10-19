@@ -18,6 +18,7 @@
 #include "kbd_settings.h"
 #include "wifi_ap.h"
 #include "kbd_state.h"
+#include "status_led.h"
 #include "webserver.h"
 
 static const char *TAG = "webserver";
@@ -144,15 +145,18 @@ static void status_json(char *json, size_t len)
     char ssid[KBD_SSID_MAX_LEN + 1];
     char pass[KBD_PASS_MAX_LEN + 1];
     char ssid_json[KBD_SSID_MAX_LEN * 6 + 1];
+    kbd_settings_t cfg;
     settings_effective_ap(ssid, sizeof(ssid), pass, sizeof(pass));
+    settings_get(&cfg);
     json_escape(ssid_json, sizeof(ssid_json), ssid);
     snprintf(json, len,
-             "{\"t\":\"st\",\"ap\":%d,\"ble\":%d,\"usb\":%d,\"ssid\":\"%s\",\"pass\":%d}",
+             "{\"t\":\"st\",\"ap\":%d,\"ble\":%d,\"usb\":%d,\"ssid\":\"%s\",\"pass\":%d,\"led\":%d}",
              wifi_ap_client_connected() ? 1 : 0,
              hid_transport_connected(HID_TRANSPORT_BLE) ? 1 : 0,
              hid_transport_connected(HID_TRANSPORT_USB) ? 1 : 0,
              ssid_json,
-             pass[0] ? 1 : 0);
+             pass[0] ? 1 : 0,
+             cfg.led_brightness);
 }
 
 static void locks_json(char *json, size_t len)
@@ -177,7 +181,7 @@ static void features_json(char *json, size_t len)
  * an explicit "sync" request). */
 static void ws_send_state(int fd)
 {
-    char json[256];
+    char json[320];
     status_json(json, sizeof(json));
     send_ws_text(fd, json);
     locks_json(json, sizeof(json));
@@ -188,7 +192,7 @@ static void ws_send_state(int fd)
 
 void webserver_notify_status(void)
 {
-    char json[256];
+    char json[320];
     status_json(json, sizeof(json));
     broadcast(json);
 }
@@ -351,6 +355,17 @@ static void handle_feat(const cJSON *root)
     push_features();
 }
 
+static void handle_led(const cJSON *root)
+{
+    const cJSON *b = cJSON_GetObjectItem(root, "b");
+    if (!cJSON_IsNumber(b) || b->valueint < 1 || b->valueint > 100) {
+        return;
+    }
+    settings_set_led_brightness((uint8_t)b->valueint);
+    status_led_set_brightness((uint8_t)b->valueint);
+    webserver_notify_status(); /* echo the applied value to every client */
+}
+
 static void handle_ws_message(int fd, uint8_t *buf, size_t len)
 {
     buf[len] = '\0';
@@ -373,6 +388,8 @@ static void handle_ws_message(int fd, uint8_t *buf, size_t len)
             handle_cfg(fd, root);
         } else if (strcmp(type->valuestring, "feat") == 0) {
             handle_feat(root);
+        } else if (strcmp(type->valuestring, "led") == 0) {
+            handle_led(root);
         } else if (strcmp(type->valuestring, "sync") == 0) {
             ws_send_state(fd);
         } else if (strcmp(type->valuestring, "ping") == 0) {

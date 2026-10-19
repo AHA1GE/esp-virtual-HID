@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "D:/Harry/esp32-virtual-keyboard/reference/esp32-cdc-keyboard-main"
+    "cmake.sourceDirectory": "D:/Harry/esp32-virtual-keyboard",
+    "idf.currentSetup": "C:\\esp\\v6.1\\esp-idf"
 }

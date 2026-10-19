@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ESP32 Virtual Keyboard</title>
+<style>
+:root {
+  --bg: #12141a; --panel: #1b1f2a; --panel2: #232838; --line: #313950;
+  --fg: #e8ebf4; --dim: #8b93a8; --acc: #4f8cff; --acc2: #7fd1a8;
+  --warn: #ffb454; --err: #ff6b6b;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  user-select: none; -webkit-user-select: none;
+}
+header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 16px; margin: 0 auto 0 0; font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dim); }
+.chip i { width: 9px; height: 9px; border-radius: 50%; background: #444; display: inline-block; }
+.chip.on i { background: var(--acc2); box-shadow: 0 0 6px var(--acc2); }
+.icobtn {
+  background: var(--panel2); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 11px; font-size: 15px; cursor: pointer;
+}
+nav.tabs { display: flex; border-bottom: 1px solid var(--line); }
+nav.tabs button {
+  flex: 1; padding: 11px; background: none; border: none; color: var(--dim);
+  font-size: 15px; cursor: pointer; border-bottom: 2px solid transparent;
+}
+nav.tabs button.sel { color: var(--fg); border-bottom-color: var(--acc); font-weight: 600; }
+main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
+.tab { display: none; }
+.tab.sel { display: block; }
+
+#txt {
+  width: 100%; min-height: 74px; resize: vertical;
+  background: var(--panel); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px; font-size: 16px; user-select: text; -webkit-user-select: text;
+}
+.hint { color: var(--dim); font-size: 12px; margin: 6px 2px 10px; }
+
+.kgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.kgrid.f { grid-template-columns: repeat(6, 1fr); }
+.kgrid.a { grid-template-columns: repeat(3, 44px); justify-content: center; }
+.kbtn {
+  background: var(--panel2); border: 1px solid var(--line); color: var(--fg);
+  border-radius: 9px; padding: 12px 4px; font-size: 13px; cursor: pointer;
+  touch-action: manipulation; text-align: center;
+}
+.kbtn:active, .kbtn.held { background: var(--acc); border-color: var(--acc); color: #fff; }
+.kbtn.latched { background: #2b4a8f; border-color: var(--acc); }
+.kbtn.lockon { background: #2f6b4f; border-color: var(--acc2); }
+.kbtn.mod { background: #2a2f45; }
+.group-title { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 14px 2px 6px; }
+
+/* mouse tab */
+#pad {
+  position: relative; height: 46vh; min-height: 240px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  touch-action: none; display: flex; align-items: center; justify-content: center;
+  color: var(--dim); font-size: 14px; overflow: hidden;
+}
+.mrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 10px; }
+.mbtn {
+  background: var(--panel2); border: 1px solid var(--line); color: var(--fg);
+  border-radius: 9px; padding: 13px 4px; font-size: 14px; cursor: pointer; touch-action: none;
+}
+.mbtn:active { background: var(--acc); }
+.slider-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--dim); font-size: 13px; }
+.slider-row input { flex: 1; }
+
+/* modals */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: none; align-items: flex-end; justify-content: center; z-index: 50;
+}
+.modal.open { display: flex; }
+.sheet {
+  background: var(--panel); border-radius: 16px 16px 0 0; border: 1px solid var(--line);
+  width: 100%; max-width: 560px; padding: 16px 16px 26px; max-height: 80vh; overflow-y: auto;
+}
+.sheet h2 { margin: 0 0 12px; font-size: 16px; display: flex; }
+.sheet h2 span { margin: 0 auto; }
+.sheet h2 b { cursor: pointer; color: var(--dim); font-weight: normal; padding: 0 4px; }
+.mkgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.featrow { display: flex; align-items: center; gap: 10px; padding: 10px 2px; }
+.featrow p { margin: 0; font-size: 12px; color: var(--dim); }
+.featrow .lbl { font-size: 14px; }
+.switch { position: relative; width: 46px; height: 26px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch em {
+  position: absolute; inset: 0; background: var(--line); border-radius: 26px; transition: .15s;
+}
+.switch em:before {
+  content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px; transition: .15s;
+}
+.switch input:checked + em { background: var(--acc); }
+.switch input:checked + em:before { transform: translateX(20px); }
+.field { margin: 10px 0; }
+.field label { display: block; color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+.field input {
+  width: 100%; background: var(--panel2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 15px;
+  user-select: text; -webkit-user-select: text;
+}
+.primary {
+  width: 100%; margin-top: 8px; background: var(--acc); color: #fff; border: none;
+  border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>ESP32 KBD</h1>
+  <span class="chip" id="chAp"><i></i>AP</span>
+  <span class="chip" id="chBt"><i></i>BT</span>
+  <span class="chip" id="chUsb"><i></i>USB</span>
+  <button class="icobtn" id="btnMedia" title="Media keys">&#9836;</button>
+  <button class="icobtn" id="btnFeat" title="Features">&#9881;</button>
+  <button class="icobtn" id="btnCfg" title="Hotspot settings">&#9776;</button>
+</header>
+<nav class="tabs">
+  <button id="tabKbBtn" class="sel">Keyboard</button>
+  <button id="tabMsBtn">Mouse</button>
+</nav>
+<main>
+  <section class="tab sel" id="tabKb">
+    <textarea id="txt" placeholder="Type here — keystrokes are mirrored to the host" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
+    <p class="hint">Live mirror: every key you press here is sent to the host (US layout). On phones and tablets each inserted character is sent as a key tap.</p>
+
+    <div class="group-title">Function Keys</div>
+    <div class="kgrid f" id="fnRow"></div>
+
+    <div class="group-title">Modifiers</div>
+    <div class="kgrid" id="modRow"></div>
+
+    <div class="group-title">Editing &amp; Navigation</div>
+    <div class="kgrid" id="editRow"></div>
+
+    <div class="group-title">Locks &amp; Misc</div>
+    <div class="kgrid" id="miscRow"></div>
+
+    <div class="group-title">Arrows</div>
+    <div class="kgrid a" id="arrowRow"></div>
+  </section>
+
+  <section class="tab" id="tabMs">
+    <div id="pad">tap = left click &nbsp;·&nbsp; double-tap = double click<br>long-press / 2-finger tap = right click<br>swipe = move &nbsp;·&nbsp; pinch = wheel</div>
+    <div class="mrow">
+      <button class="mbtn" data-mb="1">Left</button>
+      <button class="mbtn" data-mb="4">Mid</button>
+      <button class="mbtn" data-mb="2">Right</button>
+      <button class="mbtn" id="btnDbl">Dbl</button>
+    </div>
+    <div class="mrow">
+      <button class="mbtn" id="btnWu">Wheel &#9650;</button>
+      <button class="mbtn" id="btnWd">Wheel &#9660;</button>
+      <button class="mbtn" data-mb="1" style="grid-column: span 2">Drag (hold)</button>
+    </div>
+    <div class="slider-row">
+      <span>speed</span>
+      <input type="range" id="sens" min="1" max="10" value="5">
+      <span id="sensVal">5</span>
+    </div>
+  </section>
+</main>
+
+<!-- media keys modal (default hidden) -->
+<div class="modal" id="mMedia">
+  <div class="sheet">
+    <h2><span>Media keys</span><b onclick="closeModals()">✕</b></h2>
+    <div class="mkgrid" id="mediaRow"></div>
+  </div>
+</div>
+
+<!-- features modal (default hidden) -->
+<div class="modal" id="mFeat">
+  <div class="sheet">
+    <h2><span>Feature switches</span><b onclick="closeModals()">✕</b></h2>
+    <div class="featrow">
+      <label class="switch"><input type="checkbox" id="swSticky"><em></em></label>
+      <div><div class="lbl">Sticky keys</div><p>Tap CTRL/ALT/SHIFT/WIN to latch it for the next key press.</p></div>
+    </div>
+    <div class="featrow">
+      <label class="switch"><input type="checkbox" id="swToggle"><em></em></label>
+      <div><div class="lbl">Toggle keys</div><p>Tap a modifier to switch it on/off until you tap it again. Overrides sticky.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- settings modal (default hidden) -->
+<div class="modal" id="mCfg">
+  <div class="sheet">
+    <h2><span>Wi-Fi hotspot</span><b onclick="closeModals()">✕</b></h2>
+    <div class="field">
+      <label>Network name (SSID)</label>
+      <input id="cfgSsid" maxlength="32" placeholder="ESP32KBD-XXXXXX">
+    </div>
+    <div class="field">
+      <label>Password (empty = open network, min 8 chars to enable WPA2)</label>
+      <input id="cfgPass" maxlength="63" type="password" placeholder="leave empty for open network">
+    </div>
+    <button class="primary" id="cfgApply">Apply &amp; restart hotspot</button>
+    <p class="hint" id="cfgMsg"></p>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- WebSocket ---------- */
+let ws = null, wsTimer = null, pingTimer = null, currentSsid = "";
+
+function wsSend(obj) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+}
+function wsConnect() {
+  clearTimeout(wsTimer);
+  ws = new WebSocket("ws://" + location.host + "/ws");
+  ws.onopen = () => {
+    /* The server cannot see the socket until the first frame arrives, so ask
+     * for the current AP/BT/USB/lock/feature state right away. */
+    wsSend({ t: "sync" });
+    pingTimer = setInterval(() => wsSend({ t: "ping" }), 10000);
+  };
+  ws.onclose = ws.onerror = () => {
+    clearInterval(pingTimer);
+    releaseAll();
+    setChip("chAp", false); setChip("chBt", false); setChip("chUsb", false);
+    wsTimer = setTimeout(wsConnect, 2000);
+  };
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.t === "st") {
+      setChip("chAp", m.ap); setChip("chBt", m.ble); setChip("chUsb", m.usb);
+      if (m.ssid) { currentSsid = m.ssid; document.getElementById("cfgSsid").placeholder = m.ssid; }
+    } else if (m.t === "lock") {
+      setLock("CAPS", m.caps); setLock("NUM", m.num); setLock("SCRLK", m.scroll);
+    } else if (m.t === "feat") {
+      stickyOn = !!m.sticky; toggleOn = !!m.toggle;
+      document.getElementById("swSticky").checked = stickyOn;
+      document.getElementById("swToggle").checked = toggleOn;
+    } else if (m.t === "cfg") {
+      document.getElementById("cfgMsg").textContent = m.msg || m.err || "";
+    }
+  };
+}
+function setChip(id, on) { document.getElementById(id).classList.toggle("on", !!on); }
+wsConnect();
+
+/* ---------- key code tables ---------- */
+const MOD = { LCTRL: 0xE0, LSHIFT: 0xE1, LALT: 0xE2, LGUI: 0xE3, RCTRL: 0xE4, RSHIFT: 0xE5, RALT: 0xE6, RGUI: 0xE7 };
+
+const CHAR_MAP = {
+  " ": [0x2C], "\n": [0x28], "\t": [0x2B],
+  "1": [0x1E], "2": [0x1F], "3": [0x20], "4": [0x21], "5": [0x22],
+  "6": [0x23], "7": [0x24], "8": [0x25], "9": [0x26], "0": [0x27],
+  "-": [0x2D], "=": [0x2E], "[": [0x2F], "]": [0x30], "\\": [0x31],
+  ";": [0x33], "'": [0x34], "`": [0x35], ",": [0x36], ".": [0x37], "/": [0x38],
+  "!": [0x1E, 1], "@": [0x1F, 1], "#": [0x20, 1], "$": [0x21, 1], "%": [0x22, 1],
+  "^": [0x23, 1], "&": [0x24, 1], "*": [0x25, 1], "(": [0x26, 1], ")": [0x27, 1],
+  "_": [0x2D, 1], "+": [0x2E, 1], "{": [0x2F, 1], "}": [0x30, 1], "|": [0x31, 1],
+  ":": [0x33, 1], '"': [0x34, 1], "~": [0x35, 1], "<": [0x36, 1], ">": [0x37, 1], "?": [0x38, 1],
+};
+function charUsage(ch) {
+  const lo = ch.toLowerCase();
+  if (lo >= "a" && lo <= "z") return [4 + lo.charCodeAt(0) - 97, ch !== lo ? 1 : 0];
+  const m = CHAR_MAP[ch];
+  if (m) return m;
+  return null;
+}
+const NAMED_MAP = {
+  Enter: 0x28, Backspace: 0x2A, Tab: 0x2B, Escape: 0x29, Delete: 0x4C, Insert: 0x49,
+  Home: 0x4A, End: 0x4D, PageUp: 0x4B, PageDown: 0x4E,
+  ArrowUp: 0x52, ArrowDown: 0x51, ArrowLeft: 0x50, ArrowRight: 0x4F,
+  CapsLock: 0x39, NumLock: 0x53, ScrollLock: 0x47, Pause: 0x48, PrintScreen: 0x65,
+};
+for (let i = 1; i <= 12; i++) NAMED_MAP["F" + i] = 0x39 + i; /* F1=0x3A .. F12=0x45 */
+const MOD_CODE = {
+  ControlLeft: MOD.LCTRL, ControlRight: MOD.RCTRL,
+  ShiftLeft: MOD.LSHIFT, ShiftRight: MOD.RSHIFT,
+  AltLeft: MOD.LALT, AltRight: MOD.RALT,
+  MetaLeft: MOD.LGUI, MetaRight: MOD.RGUI,
+};
+
+/* ---------- live mirror text box ---------- */
+const txt = document.getElementById("txt");
+
+/* Mobile soft keyboards do not reliably pair keydown with keyup, which leaves
+ * the host key stuck down. On touch devices mirror inserted text/deletions as
+ * discrete taps instead; desktop keeps real key down/up events. */
+const IS_TOUCH = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent) ||
+                 (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const heldUsages = new Set();
+
+function sendDown(usage) {
+  heldUsages.add(usage);
+  wsSend({ t: "kb", d: 1, k: [usage] });
+}
+function sendUp(usage) {
+  heldUsages.delete(usage);
+  wsSend({ t: "kb", d: 0, k: [usage] });
+}
+function releaseAll() {
+  for (const usage of heldUsages) wsSend({ t: "kb", d: 0, k: [usage] });
+  heldUsages.clear();
+}
+function tapUsage(usage, shift) {
+  if (shift) sendDown(MOD.LSHIFT);
+  sendDown(usage);
+  sendUp(usage);
+  if (shift) sendUp(MOD.LSHIFT);
+}
+
+function keyEvt(e, down) {
+  let usage, shift = 0;
+  if (MOD_CODE[e.code] !== undefined && (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta")) {
+    usage = MOD_CODE[e.code];
+  } else if (e.key.length === 1) {
+    const m = charUsage(e.key);
+    if (!m) return;
+    usage = m[0]; shift = m[1];
+  } else if (NAMED_MAP[e.key] !== undefined) {
+    usage = NAMED_MAP[e.key];
+  } else {
+    return;
+  }
+  e.preventDefault();
+  if (down) {
+    if (shift) sendDown(MOD.LSHIFT);
+    sendDown(usage);
+  } else {
+    sendUp(usage);
+    if (shift) sendUp(MOD.LSHIFT);
+  }
+}
+txt.addEventListener("keydown", (e) => {
+  if (IS_TOUCH) return;
+  if (e.repeat) { e.preventDefault(); return; }
+  keyEvt(e, true);
+});
+txt.addEventListener("keyup", (e) => { if (!IS_TOUCH) keyEvt(e, false); });
+
+if (IS_TOUCH) {
+  txt.addEventListener("beforeinput", (e) => {
+    const t = e.inputType;
+    if (t === "insertText" || t === "insertReplacementText") {
+      e.preventDefault();
+      for (const ch of (e.data || "")) {
+        const m = charUsage(ch);
+        if (m) tapUsage(m[0], m[1]);
+      }
+    } else if (t === "deleteContentBackward") {
+      e.preventDefault();
+      tapUsage(0x2A); /* Backspace */
+    } else if (t === "insertLineBreak" || t === "insertParagraph") {
+      e.preventDefault();
+      tapUsage(0x28); /* Enter */
+    } else if (t === "insertTab") {
+      e.preventDefault();
+      tapUsage(0x2B); /* Tab */
+    }
+  });
+  /* Keep the box empty even if the keyboard engine ignored preventDefault. */
+  txt.addEventListener("input", () => { if (txt.value) txt.value = ""; });
+}
+
+/* Safety net: never leave a key down when the page loses focus or is hidden. */
+window.addEventListener("blur", releaseAll);
+window.addEventListener("pagehide", releaseAll);
+document.addEventListener("visibilitychange", () => { if (document.hidden) releaseAll(); });
+
+/* ---------- special key buttons ---------- */
+let stickyOn = false, toggleOn = false;
+function keyDown(usage) { sendDown(usage); }
+function keyUp(usage) { sendUp(usage); }
+
+function makeBtn(parent, label, usage, opts = {}) {
+  const b = document.createElement("button");
+  b.className = "kbtn" + (opts.mod ? " mod" : "");
+  b.textContent = label;
+  parent.appendChild(b);
+  if (opts.mod) {
+    b.dataset.usage = usage;
+  } else if (opts.lock) {
+    b.dataset.lock = label;
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      keyDown(usage);
+      setTimeout(() => keyUp(usage), 60);
+    });
+  } else if (opts.hold) {
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); keyDown(usage); b.classList.add("held"); });
+    const up = () => { keyUp(usage); b.classList.remove("held"); };
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointercancel", up);
+  }
+  return b;
+}
+const modRow = document.getElementById("modRow");
+makeBtn(modRow, "CTRL", MOD.LCTRL, { mod: 1 });
+makeBtn(modRow, "WIN", MOD.LGUI, { mod: 1 });
+makeBtn(modRow, "ALT", MOD.LALT, { mod: 1 });
+makeBtn(modRow, "SHIFT", MOD.LSHIFT, { mod: 1 });
+
+/* modifier buttons behave per feature mode, decided at event time:
+ * sticky/toggle -> one-shot "mod" click message; otherwise hold semantics */
+document.querySelectorAll("#modRow .kbtn").forEach((b) => {
+  const usage = +b.dataset.usage;
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (stickyOn || toggleOn) {
+      wsSend({ t: "mod", u: usage });
+    } else {
+      b.setPointerCapture(e.pointerId);
+      keyDown(usage);
+      b.classList.add("held");
+    }
+  });
+  const up = () => {
+    if (!stickyOn && !toggleOn) { keyUp(usage); b.classList.remove("held"); }
+  };
+  b.addEventListener("pointerup", up);
+  b.addEventListener("pointercancel", up);
+});
+
+const editDefs = [
+  ["ESC", 0x29], ["TAB", 0x2B], ["DEL", 0x4C], ["BKSP", 0x2A], ["ENTER", 0x28],
+  ["INS", 0x49], ["HOME", 0x4A], ["END", 0x4D], ["PGUP", 0x4B], ["PGDN", 0x4E],
+];
+const editRow = document.getElementById("editRow");
+editDefs.forEach(([l, u]) => makeBtn(editRow, l, u, { hold: 1 }));
+
+const miscDefs = [
+  ["PRTSC", 0x65, 0], ["SCRLK", 0x47, 1], ["PAUSE", 0x48, 0], ["CAPS", 0x39, 1], ["NUM", 0x53, 1],
+];
+const miscRow = document.getElementById("miscRow");
+miscDefs.forEach(([l, u, lk]) => makeBtn(miscRow, l, u, lk ? { lock: 1 } : { hold: 1 }));
+
+/* Arrow cluster: up alone on the first row, then left/down/right. */
+const arrowRow = document.getElementById("arrowRow");
+function addSpacer(parent) { parent.appendChild(document.createElement("span")); }
+addSpacer(arrowRow);
+makeBtn(arrowRow, "\u2191", 0x52, { hold: 1 });
+addSpacer(arrowRow);
+[["\u2190", 0x50], ["\u2193", 0x51], ["\u2192", 0x4F]]
+  .forEach(([l, u]) => makeBtn(arrowRow, l, u, { hold: 1 }));
+
+const fnRow = document.getElementById("fnRow");
+for (let i = 1; i <= 12; i++) makeBtn(fnRow, "F" + i, 0x39 + i, { hold: 1 });
+
+function setLock(label, on) {
+  document.querySelectorAll(".kbtn").forEach((b) => {
+    if (b.dataset.lock === label) b.classList.toggle("lockon", !!on);
+  });
+}
+
+/* ---------- media modal ---------- */
+const mediaDefs = [
+  ["\u{1F507}", 0xE2], ["VOL-", 0xEA], ["VOL+", 0xE9],
+  ["\u23EE", 0xB6], ["\u23F5", 0xCD], ["\u23F9", 0xB7], ["\u23ED", 0xB5],
+];
+const mediaRow = document.getElementById("mediaRow");
+mediaDefs.forEach(([l, u]) => {
+  const b = document.createElement("button");
+  b.className = "kbtn"; b.textContent = l;
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); wsSend({ t: "cc", u, d: 1 }); });
+  const up = () => wsSend({ t: "cc", u, d: 0 });
+  b.addEventListener("pointerup", up);
+  b.addEventListener("pointercancel", up);
+  mediaRow.appendChild(b);
+});
+
+/* ---------- modals ---------- */
+function openModal(id) { closeModals(); document.getElementById(id).classList.add("open"); }
+function closeModals() { document.querySelectorAll(".modal").forEach((m) => m.classList.remove("open")); }
+document.querySelectorAll(".modal").forEach((m) => m.addEventListener("click", (e) => { if (e.target === m) closeModals(); }));
+document.getElementById("btnMedia").onclick = () => openModal("mMedia");
+document.getElementById("btnFeat").onclick = () => openModal("mFeat");
+document.getElementById("btnCfg").onclick = () => openModal("mCfg");
+
+/* ---------- feature switches ---------- */
+document.getElementById("swSticky").addEventListener("change", (e) => { wsSend({ t: "feat", sticky: e.target.checked, toggle: document.getElementById("swToggle").checked }); });
+document.getElementById("swToggle").addEventListener("change", (e) => { wsSend({ t: "feat", sticky: document.getElementById("swSticky").checked, toggle: e.target.checked }); });
+
+/* ---------- settings ---------- */
+document.getElementById("cfgApply").onclick = () => {
+  const ssid = document.getElementById("cfgSsid").value.trim() || currentSsid;
+  const pass = document.getElementById("cfgPass").value;
+  if (!ssid) {
+    document.getElementById("cfgMsg").textContent = "enter a network name";
+    return;
+  }
+  if (pass && pass.length < 8) {
+    document.getElementById("cfgMsg").textContent = "password must be empty or at least 8 characters";
+    return;
+  }
+  wsSend({ t: "cfg", ssid, pass });
+  document.getElementById("cfgMsg").textContent = "applying... reconnect to the new network if it changed";
+};
+
+/* ---------- tabs ---------- */
+document.getElementById("tabKbBtn").onclick = () => selTab("tabKb", "tabKbBtn");
+document.getElementById("tabMsBtn").onclick = () => selTab("tabMs", "tabMsBtn");
+function selTab(tab, btn) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("sel"));
+  document.querySelectorAll("nav.tabs button").forEach((t) => t.classList.remove("sel"));
+  document.getElementById(tab).classList.add("sel");
+  document.getElementById(btn).classList.add("sel");
+}
+
+/* ---------- mouse gestures ---------- */
+const pad = document.getElementById("pad");
+const sens = document.getElementById("sens");
+const sensVal = document.getElementById("sensVal");
+sens.oninput = () => sensVal.textContent = sens.value;
+
+let st = null, pinch = null, lastTap = 0;
+function msSend(b, x, y, w) { wsSend({ t: "ms", b, x, y, w }); }
+function click(btn) {
+  msSend(btn, 0, 0, 0);
+  setTimeout(() => msSend(0, 0, 0, 0), 40);
+}
+function clickSeq(btn, times) {
+  let d = 0;
+  for (let i = 0; i < times; i++) {
+    setTimeout(() => msSend(btn, 0, 0, 0), d);
+    setTimeout(() => msSend(0, 0, 0, 0), d + 40);
+    d += 100;
+  }
+}
+pad.addEventListener("contextmenu", (e) => e.preventDefault());
+pad.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    st = { x: t.clientX, y: t.clientY, t0: Date.now(), moved: false, lp: false };
+    st.lpTimer = setTimeout(() => { if (st && !st.moved) { st.lp = true; click(2); } }, 500);
+  } else if (e.touches.length === 2) {
+    if (st) { clearTimeout(st.lpTimer); st = null; }
+    pinch = { d: Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), moved: false };
+  }
+}, { passive: false });
+pad.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1 && st) {
+    const t = e.touches[0];
+    const dx = t.clientX - st.x, dy = t.clientY - st.y;
+    if (!st.moved && Math.hypot(dx, dy) > 10) { st.moved = true; clearTimeout(st.lpTimer); }
+    if (st.moved) {
+      const s = +sens.value / 5;
+      const cx = Math.max(-127, Math.min(127, Math.round(dx * s)));
+      const cy = Math.max(-127, Math.min(127, Math.round(dy * s)));
+      if (cx || cy) msSend(0, cx, cy, 0);
+      st.x = t.clientX; st.y = t.clientY;
+    }
+  } else if (e.touches.length === 2 && pinch) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const step = Math.round((d - pinch.d) / 12);
+    if (step !== 0) { msSend(0, 0, 0, Math.max(-5, Math.min(5, step))); pinch.d = d; pinch.moved = true; }
+  }
+}, { passive: false });
+pad.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  if (pinch && e.touches.length === 0) {
+    if (!pinch.moved) click(2); /* two-finger tap = right click */
+    pinch = null;
+    return;
+  }
+  if (st && e.touches.length === 0) {
+    clearTimeout(st.lpTimer);
+    const dur = Date.now() - st.t0;
+    if (!st.moved && !st.lp && dur < 300) {
+      const now = Date.now();
+      /* The first tap already sent one click; one more within the host's
+       * double-click interval is what makes it a double click. Sending two
+       * here would make three and turn it into a triple click. */
+      if (now - lastTap < 350) { click(1); lastTap = 0; }
+      else { click(1); lastTap = now; }
+    }
+    st = null;
+  }
+}, { passive: false });
+
+/* mouse buttons (hold) */
+document.querySelectorAll(".mbtn[data-mb]").forEach((b) => {
+  const bit = +b.dataset.mb;
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); msSend(bit, 0, 0, 0); });
+  const up = () => msSend(0, 0, 0, 0);
+  b.addEventListener("pointerup", up);
+  b.addEventListener("pointercancel", up);
+});
+document.getElementById("btnDbl").onclick = () => clickSeq(1, 2);
+document.getElementById("btnWu").onclick = () => msSend(0, 0, 0, 1);
+document.getElementById("btnWd").onclick = () => msSend(0, 0, 0, -1);
+</script>
+</body>
+</html>

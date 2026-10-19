@@ -1,0 +1,61 @@
+menu "Virtual Keyboard Configuration"
+
+    config KBD_LED_GPIO
+        int "Status LED GPIO"
+        default 48 if IDF_TARGET_ESP32S3
+        default 8
+        range 0 48
+        help
+            GPIO driving the status LED (solid: booting, breathing: waiting
+            for a softAP client, blinking: client connected). The ESP32-S3
+            Super Mini has its onboard WS2812 on GPIO48; ESP32-C3 Super Mini
+            boards use GPIO8.
+
+    config KBD_LED_ACTIVE_LOW
+        bool "Status LED is active-low"
+        default y
+        help
+            Wiring polarity for a plain LED. Ignored when KBD_LED_WS2812 is
+            enabled.
+
+    config KBD_LED_WS2812
+        bool "Status LED is an addressable WS2812 RGB LED"
+        default y if IDF_TARGET_ESP32S3
+        default n
+        help
+            Drive the status LED with the WS2812 protocol (RMT) instead of
+            LEDC PWM. The three patterns use the blue channel.
+            ESP32-S3 Super Mini boards have a WS2812 on GPIO48.
+
+
+    config KBD_FACTORY_RESET_GPIO
+        int "Factory reset button GPIO (hold 5 s)"
+        default 0
+        help
+            Hold this button (usually BOOT) for 5 seconds to erase all
+            settings in NVS and reboot.
+
+    config KBD_AP_SSID_PREFIX
+        string "SoftAP SSID prefix"
+        default "ESP32KBD-"
+        help
+            Default SSID is "<prefix>XXXXXX" where XXXXXX are the last three
+            bytes of the WiFi MAC in hex.
+
+    config KBD_BLE_DEVICE_NAME
+        string "BLE HID device name (max 15 chars)"
+        default "ESP32 Keyboard"
+        help
+            Name shown when pairing over Bluetooth. Longer names do not fit
+            in the BLE advertisement payload next to the HID UUID.
+
+    config KBD_CONSOLE_ON_USB_CDC
+        bool "Redirect console/log output to USB CDC port"
+        default n
+        help
+            Enable on single-port boards where the native USB connector is
+            wired to the OTG peripheral. When off, the console stays on
+            UART0/USB-Serial-JTAG and the TinyUSB CDC port still enumerates
+            but only echoes nothing.
+
+endmenu

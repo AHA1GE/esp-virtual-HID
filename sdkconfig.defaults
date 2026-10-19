@@ -1,0 +1,30 @@
+# Target (bring-up board; idf.py set-target overrides this per build directory)
+CONFIG_IDF_TARGET="esp32s3"
+
+# 4MB flash layout, no PSRAM required
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# BLE host: NimBLE only (lower RAM than Bluedroid, supports HID device via esp_hid)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_HID_SERVICE=y
+
+# TinyUSB composite device: CDC-ACM interface for the serial channel
+CONFIG_TINYUSB_CDC_ENABLED=y
+CONFIG_TINYUSB_HID_COUNT=1
+
+# WiFi + BLE share the antenna: enable software coexistence
+CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+
+# HTTP server: WS handling + JSON parsing need a bit more stack
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_HTTPD_STACK_SIZE=6144
+CONFIG_HTTPD_MAX_URI_HANDLERS=8
+
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

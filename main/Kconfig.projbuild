@@ -30,7 +30,7 @@ menu "Virtual Keyboard Configuration"
     config KBD_LED_BRIGHTNESS
         int "Status LED brightness (%)"
         range 1 100
-        default 60 if IDF_TARGET_ESP32S3
+        default 40 if IDF_TARGET_ESP32S3
         default 100
         help
             Overall brightness of the status LED patterns and the red error

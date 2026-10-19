@@ -1,4 +1,4 @@
-# ESP32 Virtual Keyboard
+# ESP Virtual HID
 
 A wireless keyboard and mouse built on an ESP32 board. Join the board's Wi-Fi
 hotspot from a phone or laptop, open the web page, and everything you type or
@@ -15,7 +15,7 @@ Bluetooth at the same time.
 ## How to use it
 
 1. Power the board. The LED breathes while it waits for a device.
-2. Join the Wi-Fi network **ESP32KBD-XXXXXX** (open by default).
+2. Join the Wi-Fi network **ESP-HID-XXXXXX** (open by default).
 3. Open <http://192.168.4.1> in a browser.
 4. **Keyboard tab**: type in the text box, or tap the special-key buttons
    (Function keys, modifiers, editing/navigation, locks, arrows). The music

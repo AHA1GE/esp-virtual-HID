@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>ESP32 Virtual Keyboard</title>
+<title>ESP Virtual HID</title>
 <style>
 :root {
   --bg: #12141a; --panel: #1b1f2a; --panel2: #232838; --line: #313950;
@@ -121,7 +121,7 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
 </head>
 <body>
 <header>
-  <h1>ESP32 KBD</h1>
+  <h1>ESP HID</h1>
   <span class="chip" id="chAp"><i></i>AP</span>
   <span class="chip" id="chBt"><i></i>BT</span>
   <span class="chip" id="chUsb"><i></i>USB</span>
@@ -204,7 +204,7 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
     <h2><span>Settings</span><b onclick="closeModals()">✕</b></h2>
     <div class="field">
       <label>Network name (SSID)</label>
-      <input id="cfgSsid" maxlength="32" placeholder="ESP32KBD-XXXXXX">
+      <input id="cfgSsid" maxlength="32" placeholder="ESP-HID-XXXXXX">
     </div>
     <div class="field">
       <label>Password (empty = open network, min 8 chars to enable WPA2)</label>
@@ -214,8 +214,8 @@ main { flex: 1; overflow-y: auto; padding: 10px 12px 24px; }
     <p class="hint" id="cfgMsg"></p>
     <div class="slider-row">
       <span>LED brightness</span>
-      <input type="range" id="ledBright" min="1" max="100" value="40">
-      <span id="ledVal">40</span>
+      <input type="range" id="ledBright" min="1" max="100" value="10">
+      <span id="ledVal">10</span>
     </div>
   </div>
 </div>

@@ -12,7 +12,7 @@ extern "C" {
 #define KBD_PASS_MAX_LEN 63 /* WPA2 PSK passphrase: 8..63 characters */
 
 typedef struct {
-    char ssid[KBD_SSID_MAX_LEN + 1];   /* empty means "use default ESP32KBD-XXXXXX" */
+    char ssid[KBD_SSID_MAX_LEN + 1];   /* empty means "use default ESP-HID-XXXXXX" */
     char pass[KBD_PASS_MAX_LEN + 1];   /* empty means open network */
     bool sticky_keys;
     bool toggle_keys;

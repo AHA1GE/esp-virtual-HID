@@ -7,8 +7,7 @@ Bluetooth at the same time.
 
 ## What you need
 
-- An ESP32 board with native USB (ESP32-S3, S2 or P4) for USB HID. ESP32-C3
-  has no USB-OTG, so it works over Bluetooth only.
+- An ESP32 board with native USB (ESP32-S3, S2 or P4) for USB HID. ESP32-C3 has no USB-OTG, so it works over Bluetooth only.
 - The board's USB connector plugged into the host computer.
 - A phone or laptop with Wi-Fi.
 

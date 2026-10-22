@@ -1,0 +1,65 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [esp32s3, esp32s31, esp32c3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build firmware and stage artifacts
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.1
+          target: ${{ matrix.target }}
+          # Runs inside the ESP-IDF container, where idf.py and esptool live.
+          command: |
+            set -euo pipefail
+            # Capture the ESP-IDF Python up front; use it later rather than
+            # relying on the environment surviving the build step intact.
+            PY="${IDF_PYTHON_ENV_PATH}/bin/python"
+            idf.py build
+            T="${{ matrix.target }}"
+            mkdir -p "dist/$T"
+            cp build/bootloader/bootloader.bin            "dist/$T/$T-bootloader.bin"
+            cp build/partition_table/partition-table.bin  "dist/$T/$T-partition-table.bin"
+            cp build/esp32_virtual_keyboard.bin           "dist/$T/$T-esp32_virtual_keyboard.bin"
+            (cd build && "$PY" -m esptool --chip "$T" merge_bin -o "../dist/$T/$T-merged-flash.bin" @flash_args)
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.target }}
+          path: dist/${{ matrix.target }}/
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/**/*

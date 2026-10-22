@@ -5,6 +5,8 @@ hotspot from a phone or laptop, open the web page, and everything you type or
 tap is sent to the computer the board is plugged into — over USB and/or
 Bluetooth at the same time.
 
+![ESP Virtual HID web interface (keyboard tab)](assets/screenshot.png)
+
 ## What you need
 
 - An ESP32 board with native USB for USB HID — we recommend **ESP32-S3** or

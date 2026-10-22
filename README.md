@@ -59,3 +59,25 @@ Hold the BOOT button for 5 seconds to erase all settings and reboot.
   does not repeat. Desktop browsers keep normal press/release and key repeat.
 - The host sees the board as **ESP32 Virtual Keyboard** (keyboard, mouse,
   media keys, and a serial port).
+
+## License
+
+Copyright (C) 2026 Harry Sun
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for more
+details.
+
+Third-party components keep their own licenses — ESP-IDF, cJSON, TinyUSB and
+esp_tinyusb are Apache-2.0.
+
+## References
+
+Prior art that was studied while building this project is described in
+[docs/references/](docs/references/). No third-party code is included.

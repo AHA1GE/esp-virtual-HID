@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Harry Sun */
+
 #include "soc/soc_caps.h"
 
 #if SOC_BLE_SUPPORTED

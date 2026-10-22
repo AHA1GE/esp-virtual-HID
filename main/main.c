@@ -1,4 +1,7 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Harry Sun
+ *
  * ESP32 Virtual Keyboard: softAP + web UI driving BLE HID and/or USB HID
  * (composite keyboard + mouse + consumer reports). Backends self-disable on
  * targets without BLE or without USB-OTG.

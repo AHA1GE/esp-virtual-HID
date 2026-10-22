@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Harry Sun */
+
 #include <string.h>
 #include "hid_core.h"
 #include "kbd_state.h"

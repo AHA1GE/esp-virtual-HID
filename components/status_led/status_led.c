@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Harry Sun */
+
 #include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

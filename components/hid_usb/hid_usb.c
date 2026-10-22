@@ -1,4 +1,7 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Harry Sun
+ *
  * USB backend: TinyUSB composite device with one HID interface
  * (keyboard + mouse + consumer reports) and one CDC-ACM interface so the
  * same physical port keeps a usable serial channel while the keyboard runs.

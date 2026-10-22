@@ -1,4 +1,7 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Harry Sun
+ *
  * HTTP + WebSocket server. The single-page UI is embedded into the firmware;
  * everything else flows over one WebSocket endpoint /ws as small JSON frames:
  *   up:   kb (key events), ms (mouse), cc (media), cfg (AP credentials),

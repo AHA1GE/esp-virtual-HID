@@ -1,26 +1,34 @@
-# esp32 cirtual keyboard
+# ESP Virtual HID — project brief
 
-target: all esp32 board has native usb cdc support
-bring up target: esp32c3, no psram, 4M flash
+Target: any ESP32 board with native USB. Boards without USB-OTG still build
+and work over BLE. Bring-up target: ESP32-C3, no PSRAM, 4 MB flash.
 
-## UI and Features
-- soft AP, limited to 1 client
-- user can consifure SSID and password via web page
-- default SSID: "ESP32KBD-[MAC]", defualt open (no password)
-- led indicate status: 
+## UI and features
+
+- SoftAP limited to one client.
+- SSID and password configurable from the web page.
+- Default SSID: `ESP-HID-XXXXXX` (last three bytes of the WiFi MAC), open by
+  default.
+- Status LED:
   - solid: starting up
-  - breathing: waiting for client
+  - breathing: waiting for a client
   - blinking: client connected
-  - GPIO8, active low
-- web page:
-  - input box for client-keyboard input
-  - 3 rows of buttons for special keys: F1-F12, ESC, TAB, CTRL, ALT, SHIFT, WIN, DEL, BACKSPACE, ENTER, INS, HOME, END, PAGE UP, PAGE DOWN, ARROW UP, ARROW DOWN, ARROW LEFT, ARROW RIGHT, PRINT SCREEN, SCROLL LOCK, PAUSE, CAPS LOCK, NUM LOCK
-  - default-hide modal for media keys: MUTE, VOL UP, VOL DOWN, PLAY/PAUSE, STOP, NEXT, PREV
-  - default-hide modal for features switch: sticky keys, toggle keys
-  - two tabs on the web page: "Keyboard" and "Mouse"
-  - mouse tab:
-    - input box for client-mouse input
-    - support touch-gestures to mouse-key: tap=left click, double-tap=double-click, long-press=right-click, two-finger-tap=right-click, swipe=mouse-move, pinch=mouse-wheel
+  - fast red flash (10 Hz): hard error
+  - The GPIO is configurable — default 48 (onboard WS2812) on ESP32-S3 and
+    8 on ESP32-C3.
+- Web page:
+  - text box for client-keyboard input, mirrored live to the host
+  - special-key buttons: F1–F12, ESC, TAB, CTRL, ALT, SHIFT, WIN, DEL,
+    BACKSPACE, ENTER, INS, HOME, END, PAGE UP, PAGE DOWN, arrows, PRINT
+    SCREEN, SCROLL LOCK, PAUSE, CAPS LOCK, NUM LOCK
+  - default-hidden modal for media keys: MUTE, VOL UP, VOL DOWN, PLAY/PAUSE,
+    STOP, NEXT, PREV
+  - default-hidden modal for feature switches: sticky keys, toggle keys
+  - two tabs: Keyboard and Mouse
+  - mouse tab gestures: tap = left click, double-tap = double click,
+    long-press or two-finger tap = right click, swipe = pointer move,
+    pinch = wheel
 
-## BUILD
-- use ESP-IDF v6.1
+## Build
+
+ESP-IDF v6.1.
